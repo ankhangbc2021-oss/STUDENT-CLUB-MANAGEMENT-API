@@ -4,11 +4,19 @@ Model User
 """
 
 from datetime import datetime, timezone
+from enum import Enum
 
 from sqlalchemy import Boolean, Column, DateTime, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.db.database import Base
+
+
+class SystemRole(str, Enum):
+    """Định nghĩa Enum (USER / ADMIN)"""
+
+    USER = "USER"
+    ADMIN = "ADMIN"
 
 
 class User(Base):
@@ -21,7 +29,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=False)
     # Nhận role USER / ADMIN
-    role = Column(String(50), default="user", nullable=False)
+    role = Column(String(50), default=SystemRole.USER, nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(
         DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
