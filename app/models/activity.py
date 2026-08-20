@@ -29,6 +29,9 @@ class ClubActivity(Base):
     created_at = Column(
         DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )
+    # Cập nhật mặc định None
+    updated_at = Column(DateTime, default=None)
 
+    # Liên kết
     clubs = relationship("Club", back_populates="club_activities")
     users = relationship("User", back_populates="club_activities")
