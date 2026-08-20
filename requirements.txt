@@ -1,0 +1,7 @@
+PyJWT
+pydantic
+bcrypt
+fastapi
+SQLAlchemy
+uvicorn
+PyMySQL
