@@ -35,6 +35,7 @@ class User(Base):
         DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )
 
+    # Liên kết
     clubs = relationship("Club", back_populates="users")
     club_members = relationship("ClubMember", back_populates="users")
     club_activities = relationship("ClubActivity", back_populates="users")
