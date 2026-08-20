@@ -5,9 +5,10 @@ Tạo Base/Create/Update/Response schema
 
 from datetime import datetime
 from enum import Enum
-from app.schemas.user import UserShortResponse
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.schemas.user import UserShortResponse
 
 
 class ActivityStatus(str, Enum):
