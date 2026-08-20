@@ -12,14 +12,14 @@ from app.db.database import Base
 
 
 class Club(Base):
-    """Cấu hình bảng Club"""
+    """Cấu hình bảng Club(Câu lạc bộ)"""
 
     __tablename__ = "clubs"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(255), nullable=False)
     description = Column(Text)
-    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # Người sở hữu
     created_at = Column(
         DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )
