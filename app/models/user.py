@@ -26,6 +26,7 @@ class User(Base):
     created_at = Column(
         DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )
+
     clubs = relationship("Club", back_populates="users")
     club_members = relationship("ClubMember", back_populates="users")
     club_activities = relationship("ClubActivity", back_populates="users")
