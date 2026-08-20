@@ -5,7 +5,7 @@ Model Club / ClubMember
 
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Boolean, Column, Integer, String, Text, ForeignKey
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.db.database import Base
