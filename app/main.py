@@ -8,7 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-import app.models
+import app.models  # Tạo đủ bảng
 from app.core.config import settings
 from app.db.database import Base, engine
 from app.routers import activity, auth, club, users
