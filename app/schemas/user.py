@@ -26,7 +26,7 @@ class UserCreate(UserBase):
     """Lớp tạo người dùng"""
 
     full_name: str = Field(..., min_length=1)
-    password_hash: str = Field(..., min_length=1)
+    password: str = Field(..., min_length=1)
     role: SystemRole = SystemRole.USER
 
 
