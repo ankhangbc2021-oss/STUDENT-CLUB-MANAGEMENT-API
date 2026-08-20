@@ -89,7 +89,7 @@ def seed(db: Session) -> None:
     db.refresh(club_music)
 
     # ----------
-    # 4. SEED CLUB MEMBERS (Thành viên CLB)
+    # SEED CLUB MEMBERS (Thành viên CLB)
     # ----------
 
     members = [
@@ -104,7 +104,7 @@ def seed(db: Session) -> None:
     db.commit()
 
     # ------------
-    # 5. SEED CLUB ACTIVITIES (Hoạt động / Task của CLB)
+    # SEED CLUB ACTIVITIES (Hoạt động / Task của CLB)
     # ------------
     activities = [
         ClubActivity(
