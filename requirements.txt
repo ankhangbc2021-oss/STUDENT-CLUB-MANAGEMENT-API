@@ -6,3 +6,4 @@ SQLAlchemy
 uvicorn
 PyMySQL
 pydantic-settings
+email-validator
