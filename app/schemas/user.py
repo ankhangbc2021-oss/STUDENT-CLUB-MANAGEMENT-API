@@ -34,17 +34,17 @@ class UserUpdate(UserBase):
     """Lớp cập nhật người dùng"""
 
     full_name: str = Field(..., min_length=1)
-    password_hash: str = Field(..., min_length=1)
+    password: str = Field(..., min_length=1)
     is_active: bool = True
 
 
 class UserLogin(UserBase):
     """Lớp nhận dữ liệu đăng nhập"""
 
-    password_hash: str = Field(..., min_length=1)
+    password: str = Field(..., min_length=1)
 
 
-class UserResponse(UserBase):
+class Response(UserBase):
     """Lớp trả về cho client"""
 
     id: int
@@ -55,6 +55,35 @@ class UserResponse(UserBase):
     created_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class UserResponse(BaseModel):
+    """Lớp trả về người dùng"""
+
+    status_code: int
+    message: str
+    data: Response
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TokenResponse(BaseModel):
+    """Lớp trả về token"""
+
+    status_code: int
+    message: str
+    access_token: str | None = None
+    refresh_token: str | None = None
+    token_type: str | None = "bearer"
+    data: Response
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RefreshTokenRequest(BaseModel):
+    """Lớp làm mới token"""
+
+    refresh_token: str
 
 
 class UserShortResponse(UserBase):
