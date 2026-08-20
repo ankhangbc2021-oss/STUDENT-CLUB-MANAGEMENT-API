@@ -1,33 +1,33 @@
 """
-app/models/club.py
-Model Club / ClubMember
+app/models/activity.py
+Model ClubActivity
 """
 
 from datetime import datetime, timezone
 
-from sqlalchemy import (
-    Column,
-    DateTime,
-    ForeignKey,
-    Integer,
-    String,
-    Text,
-    UniqueConstraint,
-)
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.db.database import Base
 
 
-class Club(Base):
-    """Cấu hình bảng Club (Câu lạc bộ)"""
+class ClubActivity(Base):
+    """Cấu hình bảng ClubActivity (Hoạt động CLB)"""
 
-    __tablename__ = "clubs"
+    __tablename__ = "club_activities"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(255), nullable=False)
+    club_id = Column(Integer, ForeignKey("clubs.id"), nullable=False)
+    title = Column(String(255), nullable=False)
     description = Column(Text)
-    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    assignee_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    status = Column(
+        String(50), default="TODO", nullable=False
+    )  # TODO / IN_PROGRESS / DONE
+    priority = Column(
+        String(50), default="MEDIUM", nullable=False
+    )  # LOW / MEDIUM / HIGH
+    due_date = Column(DateTime, nullable=True)
     created_at = Column(
         DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )
@@ -36,31 +36,5 @@ class Club(Base):
     )
 
     # Liên kết
-    owner = relationship("User", back_populates="owned_clubs")
-    members = relationship(
-        "ClubMember", back_populates="club", cascade="all, delete-orphan"
-    )
-    activities = relationship(
-        "ClubActivity", back_populates="club", cascade="all, delete-orphan"
-    )
-
-
-class ClubMember(Base):
-    """Cấu hình bảng ClubMember (Thành viên CLB)"""
-
-    __tablename__ = "club_members"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    club_id = Column(Integer, ForeignKey("clubs.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    role = Column(String(50), nullable=False, default="MEMBER")  # OWNER / MEMBER
-    joined_at = Column(
-        DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
-    )
-
-    # Đảm bảo 1 user không bị thêm trùng 2 lần vào cùng 1 CLB
-    __table_args__ = (UniqueConstraint("club_id", "user_id", name="uq_club_member"),)
-
-    # Liên kết
-    club = relationship("Club", back_populates="members")
-    user = relationship("User", back_populates="club_memberships")
+    club = relationship("Club", back_populates="activities")
+    assignee = relationship("User", back_populates="assigned_activities")
