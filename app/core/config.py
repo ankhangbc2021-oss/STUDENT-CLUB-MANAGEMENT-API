@@ -32,5 +32,5 @@ class Settings(BaseSettings):
         env_file_config = "utf-8"
 
 
-# Khởi chạy
+# Khởi chạy settings
 settings = Settings()
