@@ -124,6 +124,7 @@ class ClubRoleCheck:
 
     Cách dùng trong endpoint:
         Depends(ClubRoleCheck["OWNER"]) # Chỉ có owner
+        Depends(ClubRoleCheck["OWNER", "MEMBER"]) # owner và member
     """
 
     def __init__(self, allowed_roles: list[ClubRole]):
