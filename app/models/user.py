@@ -14,6 +14,7 @@ from app.db.database import Base
 
 class SystemRole(str, Enum):
     """Định nghĩa Enum (USER / ADMIN)"""
+
     USER = "USER"
     ADMIN = "ADMIN"
 
@@ -32,7 +33,9 @@ class User(Base):
     created_at = Column(
         DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )
-    updated_at = Column(DateTime, default=None, onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime, default=None, onupdate=lambda: datetime.now(timezone.utc)
+    )
 
     # Liên kết
     owned_clubs = relationship("Club", back_populates="owner")
