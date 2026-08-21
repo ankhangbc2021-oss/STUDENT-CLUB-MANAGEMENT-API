@@ -11,6 +11,7 @@ import jwt
 from app.core.config import settings
 
 
+# <--- Chỗ hash, very password và token --->
 def hash_password(password: str, cost_fastor: int = 12) -> str:
     """
     Hash mật khẩu bằng thuật toán bcrypt.
