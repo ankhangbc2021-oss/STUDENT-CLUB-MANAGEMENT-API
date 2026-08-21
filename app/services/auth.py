@@ -57,16 +57,27 @@ def login_user(db: Session, user_data: UserLogin):
 
     user = db.query(User).filter(User.email == user_data.email).first()
 
-    if not user or not security.verify_password(user_data.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email hoặc mật khẩu không chính xác",
-        )
-
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Tài khoản không hoạt động hoặc bị khóa",
+        )
+
+    if not user or not security.verify_password(user_data.password, user.password_hash):
+        # Ghi lại số lần đăng nhập thất bại
+        remaining = security.record_failed_login(user_data.email)
+
+        if remaining == 0:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Bạn đã nhập sai 3 lần liên tiệp tài khoản bị tạm khóa 5 phút",
+            )
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Email hoặc mật khẩu không chính xác! Bạn còn {remaining} lần thử."
+            ),
         )
 
     return user
