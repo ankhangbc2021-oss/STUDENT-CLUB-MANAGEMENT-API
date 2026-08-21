@@ -3,14 +3,26 @@ app/main.py
 Khởi tạo FastAPI app, include routers, middleware
 """
 
+# import fastapi
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-import app.models  # Tạo đủ bảng
+# import slowapi dùng để rate limit
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+
+import app.models  # Tạo đủ bảng vì có __init__.py nên gộm tất cả bảng
+
+# import core
 from app.core.config import settings
+from app.core.limiter import limiter
+
+# import db
 from app.db.database import Base, engine
+
+# import router
 from app.routers import activity, auth, club, users
 
 # Khời tạo ứng dụng FastAPI
@@ -20,10 +32,7 @@ app = FastAPI(
     version=settings.APP_VERSION,
 )
 
-origins_whitelist = [
-    "http://localhost:3000",
-    "http://localhost:5173",
-]
+origins_whitelist = settings.ALLOWED_ORIGINS
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,6 +41,10 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Content-Type", "Authorization"],
 )
+
+# Gắn limiter vào app state và đăng ký handler xửa lý lỗi 429
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 @app.exception_handler(HTTPException)
