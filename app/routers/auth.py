@@ -51,7 +51,7 @@ def create_user(data: UserCreate, db: DbSession):
     summary="Đăng nhập và nhận JWT",
 )
 @limiter.limit("5/minute")  # Giới hạn 5 lần / phút mối IP
-def login(_: Request, data: UserLogin, db: DbSession):
+def login(request: Request, data: UserLogin, db: DbSession):
     """
     Endpoint Đăng nhập:
     - Kiểm tra giới hạn rate limit & khóa tài khoản
