@@ -5,10 +5,11 @@ Register/Login
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core import security
+from app.core.limiter import limiter
 from app.db.database import get_db
 from app.schemas.user import (
     RefreshTokenRequest,
@@ -49,15 +50,28 @@ def create_user(data: UserCreate, db: DbSession):
     status_code=status.HTTP_200_OK,
     summary="Đăng nhập và nhận JWT",
 )
-def login(data: UserLogin, db: DbSession):
+@limiter.limit("5/minute")  # Giới hạn 5 lần / phút mối IP
+def login(request: Request, data: UserLogin, db: DbSession):
     """
     Endpoint Đăng nhập:
+    - Kiểm tra giới hạn rate limit & khóa tài khoản
     - Nhận vào email, password
     - Gọi và xác nhận
+    - Reset bộ nhớ đệm
     - Tạo và trả JWT
     """
+    # Kiểm tra có khóa không vì nhập sai quá 3 lần
+    try:
+        security.check_login_rate_limit(data.email)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(e)
+        ) from e
 
     user = auth.login_user(db=db, user_data=data)
+
+    # Xóa lịch sử thử sai
+    security.reset_failed_login(data.email)
 
     access_token = security.create_access_token(
         data={"sub": user.email, "id": user.id, "role": user.role}
