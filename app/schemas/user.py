@@ -67,6 +67,16 @@ class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class UserListResponse(BaseModel):
+    """Trả về danh sách người dùng"""
+
+    status_code: int
+    message: str
+    data: list[Response]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class TokenResponse(BaseModel):
     """Lớp trả về token"""
 
