@@ -1,0 +1,167 @@
+"""
+app/dependencies/dependencies.py
+"""
+
+from typing import Annotated
+
+import jwt
+from fastapi import Depends, HTTPException, Path, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.orm import Session
+
+from app.core.config import settings
+from app.db.database import get_db
+from app.models.club import ClubMember
+from app.models.user import User
+from app.schemas.club import ClubRole
+from app.schemas.user import SystemRole
+
+# Khởi tạo schema bảo mật
+reusable_oauth2 = HTTPBearer()
+
+# Khai báo Type Alias
+DbSession = Annotated[Session, Depends(get_db)]
+AuthCreadentials = Annotated[HTTPAuthorizationCredentials, Depends(reusable_oauth2)]
+
+
+async def get_current_user(
+    credentials: AuthCreadentials,
+    db: DbSession,
+) -> User:
+    """
+    Dependency cốt lõi: Giải mã JWT từ Header, kiểm tra tính toàn vẹn,
+    và truy vấn thông tin User từ Database
+    """
+
+    # Tự lấy token nguyên bản
+    token = credentials.credentials
+
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Không thể xác thực thông tin đăng nhập",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    try:
+
+        # Giải khóa token
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+
+        email: str = payload.get("sub")
+        if not email:
+            raise credentials_exception
+
+    except jwt.ExpiredSignatureError as e:
+        # Bắt lỗi token hết hạn
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from e
+
+    except jwt.PyJWKError as e:
+        # Bắt toàn bộ các lỗi còn lại: sai chữ ký,...
+        raise credentials_exception from e
+
+    user = db.query(User).filter(User.email == email).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Người dùng không tồn tại trong hệ thống!",
+        )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Tài khảon này đã bị khóa hoặc ngừng sử dụng!",
+        )
+
+    return user
+
+
+# Khai báo Type Alias
+CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+class RoleChecker:
+    """
+    Class Deependency dùng để phân quyền theo vai trò
+    Nhận vào một list các role được phép truy cập
+
+    Cách dùng trong endpoint:
+        Depends(RoleChecker(["ADMIN"]))          # Chỉ admin
+        Depends(RoleChecker(["ADMIN", "USER"]))  # admin hoặc user
+    """
+
+    def __init__(self, allowed_roles: list[SystemRole]):
+        # Lưu danh sách role được phéo vô
+        self.allowed_roles = allowed_roles
+
+    def __call__(self, current_user: CurrentUser):
+        # Lấy tên role
+        user_role_name = current_user.role if current_user.role else None
+
+        # Kiểm tra role có trong quyền ko
+
+        if user_role_name not in self.allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "Quyền truy cập bị từ chối! "
+                    f"Yêu cầu một trong các quyền: {self.allowed_roles!s}"
+                ),
+            )
+        return current_user
+
+
+class ClubRoleCheck:
+    """
+    Class ClubRoleCheck dùng để phân quyền vai tròng trong club
+    Nhận vào list các role được phép truy cập
+
+    Cách dùng trong endpoint:
+        Depends(ClubRoleCheck["OWNER"]) # Chỉ có owner
+    """
+
+    def __init__(self, allowed_roles: list[ClubRole]):
+        self.allowed_roles = allowed_roles
+
+    def __call__(
+        self,
+        club_id: Annotated[int, Path(description="ID của CLB trên URL (/{club_id})")],
+        current_user: CurrentUser,
+        db: DbSession,
+    ) -> ClubMember:
+
+        # Nếu là Admin -> Bỏ qua vì có toàn quyền
+        if current_user.role == SystemRole.ADMIN:
+            return None
+
+        # Tìm thông tin thành viên câu lạc bộ
+        membership = (
+            db.query(ClubMember)
+            .filter(
+                ClubMember.club_id == club_id,
+                ClubMember.user_id == current_user.id,
+            )
+            .first()
+        )
+
+        if not membership:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Bạn chưa tham gia câu lạc bộ này",
+            )
+
+        # Kiểm tra vai trò trong CLB
+        if membership.role not in self.allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    f"Hành động yêu cầu một trong các quyền CLB: {self.allowed_roles!s}"
+                ),
+            )
+        return membership
