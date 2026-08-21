@@ -63,7 +63,7 @@ def create_access_token(data: dict) -> str:
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "type": "access"})
 
     # Ký và tạo chỗi
     encoded_jwt = jwt.encode(
@@ -71,3 +71,61 @@ def create_access_token(data: dict) -> str:
     )
 
     return encoded_jwt
+
+
+def create_refresh_token(data: dict) -> str:
+    """
+    Tạo JWT refresh token từ dữ liệu được cung cấp.
+
+    Args:
+        data (dict): Dữ liệu được lưu trong JWT payload.
+
+    Returns:
+        str: JWT refresh token.
+    """
+    to_encode = data.copy()
+
+    # Tính thời gian hết token - đọc từ config
+    expire = datetime.now(timezone.utc) + timedelta(
+        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+    )
+    to_encode.update({"exp": expire, "type": "refresh"})
+
+    # Ký và tạo chỗi
+    encoded_jwt = jwt.encode(
+        to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
+    )
+
+    return encoded_jwt
+
+
+def verify_refresh_token(token: str) -> str | None:
+    """
+    Xác thực JWT refresh token và trả về user_id (sub) nếu hợp lệ.
+
+    Args:
+        token (str): JWT refresh token được gửi lên từ client.
+
+    Returns:
+        str | None: user_id nếu token hợp lệ và đúng type refresh, ngược lại trả về None.
+    """
+    try:
+        payload = jwt.decode(
+            token,
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
+        )
+        token_type: str | None = payload.get("type")
+        user_id: str | None = payload.get("id")
+
+        # Bắt buộc phải là loại refresh token và có chứa user_id
+        if token_type != "refresh":
+            return None
+
+        if not user_id:
+            return None
+
+        return str(user_id)
+    except jwt.PyJWTError:
+        # Bắt tất cả các lỗi của PyJWT (hết hạn, sai chữ ký, format sai...)
+        return None
