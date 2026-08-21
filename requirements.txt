@@ -7,3 +7,4 @@ uvicorn
 PyMySQL
 pydantic-settings
 email-validator
+slowapi
