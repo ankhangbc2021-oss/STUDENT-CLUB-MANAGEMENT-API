@@ -10,6 +10,64 @@ import jwt
 
 from app.core.config import settings
 
+# Bộ nhớ tạm lưu số lần gõ sai {"email": {"count": 2, "locked_until": datetime}}
+FAILED_LOGINS: dict[str, dict] = {}
+MAX_ATTEMPTS = settings.MAX_ATTEMPTS
+LOCK_MINUTES = settings.LOCK_MINUTES
+
+
+# <--- Check rate limit --->
+def check_login_rate_limit(email: str) -> None:
+    """Kiểm tra xem tài khoản có đang bị khóa không
+
+    Args:
+        email (str): nhận vào email
+    """
+
+    record = FAILED_LOGINS.get(email)
+    if not record:
+        return
+
+    locked_until: datetime | None = record.get(
+        "locked_until"
+    )  # Lấy dữ liệu Any do chưa biết
+    now = datetime.now(timezone.utc)  # Lấy thời gian hiện tại
+
+    if locked_until and locked_until > now:
+        time_diff: timedelta = (
+            locked_until - now
+        )  # Phút còn lại vd(khóa tới 10:05 hiện tại 10:00 còn 5p)
+        remain = int(time_diff.total_seconds())  # Đổi sang giây
+        raise ValueError(f"Tài khoản bị tạm khóa. Vui lòng thử lại sau {remain}s.")
+
+    # Đã qua thời gian khóa -> Dọn dẹp bộ nhớ
+    if locked_until and locked_until <= now:
+        FAILED_LOGINS.pop(email, None)
+
+
+def record_failed_login(email: str) -> int:
+    """Ghi nhận 1 lần nhập sai, trả về số lần thử còn lại"""
+    now = datetime.now(timezone.utc)
+
+    if email not in FAILED_LOGINS:
+        FAILED_LOGINS[email] = {"count": 1, "locked_until": None}
+    else:
+        FAILED_LOGINS[email]["count"] += 1
+
+    count = FAILED_LOGINS[email]["count"]
+
+    # Kiểm tra số lần nhập còn lại nếu lên vượt giới hạn thì lập tức tạo thời gian khóa
+    if count >= MAX_ATTEMPTS:
+        FAILED_LOGINS[email]["locked_until"] = now + timedelta(minutes=LOCK_MINUTES)
+        return 0
+
+    return MAX_ATTEMPTS - count
+
+
+def reset_failed_login(email: str) -> None:
+    """Xóa lịch sử sai sau khi đăng nhập thành công"""
+    FAILED_LOGINS.pop(email, None)
+
 
 # <--- Chỗ hash, very password và token --->
 def hash_password(password: str, cost_fastor: int = 12) -> str:
