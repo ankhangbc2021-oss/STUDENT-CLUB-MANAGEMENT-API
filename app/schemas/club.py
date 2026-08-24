@@ -8,7 +8,7 @@ Có 2 Schemas Gồm Club / ClubMember
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, EmailStr
 
 
 class ClubRole(str, Enum):
@@ -24,7 +24,6 @@ class ClubBase(BaseModel):
 
     name: str = Field(..., min_length=1)
     description: str | None = None
-    owner_id: int = Field(...)
 
 
 class CreateClub(ClubBase):
@@ -35,20 +34,41 @@ class UpdateClub(ClubBase):
     """Lớp cập nhật Club(Câu lạc bộ)"""
 
 
-class DeleteClub(ClubBase):
-    """Lớp xóa Club(Câu lạc bộ)"""
-
-
-class ClubResponse(ClubBase):
+class ClubResponseBase(ClubBase):
     """Lớp trả về Club(Câu lạc bộ)"""
 
     id: int
+    owner_id: int
     created_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
 
+class ClubResponse(BaseModel):
+    """Lớp trả về Club(có mess và status_code)"""
+
+    status_code: int
+    message: str | None = None
+    data: ClubResponseBase | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ClubResponseList(BaseModel):
+    """Lớp trả về danh sách câu lạc bộ"""
+
+    status_code: int
+    message: str | None = None
+    data: list[ClubResponseBase] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --------------------------
 # --- Schemas ClubMember ---
+# --------------------------
+
+
 class ClubMemberBase(BaseModel):
     """Lớp cơ bản ClubMember"""
 
@@ -60,13 +80,43 @@ class CreateClubMember(ClubMemberBase):
     """Lớp tạo ClubMember(Thành viên câu lạc bộ)"""
 
 
-class DeleteClubMember(ClubMemberBase):
-    """Xóa ClubMember(Thành viên câu lạc bộ)"""
+class MemberInfo(ClubMemberBase):
+    """Lớp trả về Info thành viên(Thành viên câu lạc bộ)"""
+
+    email: EmailStr
+    joined_at: datetime | None = None
+    role: ClubRole = ClubRole.MEMBER
+
+    model_config = ConfigDict(from_attributes=True)
 
 
-class ClubMemberResponse(ClubMemberBase):
-    """Lớp trả về ClubMember(Thành viên câu lạc bộ)"""
+class ClubMemberData(BaseModel):
+    """Lớp data trả về danh sách thành viên list"""
 
     id: int
-    club_id: int
-    joined_at: datetime | None = None
+    name: str
+    description: str | None = None
+    owner_id: int
+    members: list[MemberInfo] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ClubMemberResponse(BaseModel):
+    """Lớp trả về danh sách thành viên list"""
+
+    status_code: int
+    message: str | None = None
+    data: ClubMemberData | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ClubAddMemberResponse(BaseModel):
+    """Lớp trả về khi thêm thành viên"""
+
+    status_code: int
+    message: str | None = None
+    data: MemberInfo
+
+    model_config = ConfigDict(from_attributes=True)
