@@ -6,6 +6,7 @@ Model Club / ClubMember
 from datetime import datetime, timezone
 
 from sqlalchemy import (
+    Boolean,
     Column,
     DateTime,
     ForeignKey,
@@ -34,6 +35,9 @@ class Club(Base):
     updated_at = Column(
         DateTime, default=None, onupdate=lambda: datetime.now(timezone.utc)
     )
+    # Cột dùng cho Soft Delete (Xóa mềm)
+    is_deleted = Column(Boolean, default=False, nullable=False, index=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True, default=None)
 
     # Liên kết
     owner = relationship("User", back_populates="owned_clubs")
