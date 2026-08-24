@@ -11,8 +11,12 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.db.database import get_db
-from app.models.club import ClubMember
+
+# Models
+from app.models.club import Club, ClubMember
 from app.models.user import User
+
+# Schemas
 from app.schemas.club import ClubRole
 from app.schemas.user import SystemRole
 
@@ -163,6 +167,14 @@ class ClubRoleCheck:
             )
             .first()
         )
+        existing_id = db.query(Club).filter(Club.id == club_id).first()
+
+        # Nếu không có CLB trả về 404
+        if not existing_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Câu lạc bộ không tồn tại trong hệ thống.",
+            )
 
         if not membership:
             raise HTTPException(
