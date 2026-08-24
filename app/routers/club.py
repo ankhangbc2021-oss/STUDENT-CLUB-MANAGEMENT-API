@@ -322,14 +322,22 @@ def get_members(
 # Xóa mềm CLB
 @router.delete(
     path="/deleted/{club_id}",
-    response_model=ClubMemberResponse,
+    response_model=ClubResponse,
     status_code=status.HTTP_200_OK,
-    summary="Xóa CLB mền (vẫn có trong CLB)",
+    summary="Xóa CLB mền (vẫn có trong DB)",
 )
 def is_deleted(
     db: DbSession,
     current_user: CurrentUser,
     _: RequireOwner,
-    club_id: int = Path(..., description="Nhập ID CLb để xóa mền"),
+    club_id: int = Path(..., description="Nhập ID CLB để xóa mền"),
 ):
-    """"""
+    """Xóa CLB mềm"""
+
+    club_service.is_deleted(db=db, club_id=club_id, current_user=current_user)
+    
+    return {
+        "status_code": status.HTTP_200_OK,
+        "message": "Xóa mềm thành công",
+        "data": None,
+    }
