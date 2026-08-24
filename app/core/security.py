@@ -146,7 +146,7 @@ def create_refresh_token(data: dict) -> str:
 
     # Tính thời gian hết token - đọc từ config
     expire = datetime.now(timezone.utc) + timedelta(
-        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES
     )
     to_encode.update({"exp": expire, "type": "refresh"})
 
