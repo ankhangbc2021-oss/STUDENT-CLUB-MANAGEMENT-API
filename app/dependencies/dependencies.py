@@ -5,7 +5,7 @@ app/dependencies/dependencies.py
 from typing import Annotated
 
 import jwt
-from fastapi import Depends, HTTPException, Path, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -16,8 +16,7 @@ from app.models.user import User
 from app.schemas.club import ClubRole
 from app.schemas.user import SystemRole
 
-# Khởi tạo schema bảo mật
-reusable_oauth2 = HTTPBearer()
+reusable_oauth2 = HTTPBearer()  # Đọc header Authrization(tự ktra resquest có gửi ko)
 
 # Khai báo Type Alias
 DbSession = Annotated[Session, Depends(get_db)]
@@ -76,7 +75,7 @@ async def get_current_user(
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Tài khảon này đã bị khóa hoặc ngừng sử dụng!",
+            detail="Tài khoản này đã bị khóa hoặc ngừng sử dụng!",
         )
 
     return user
@@ -123,16 +122,16 @@ class ClubRoleCheck:
     Nhận vào list các role được phép truy cập
 
     Cách dùng trong endpoint:
-        Depends(ClubRoleCheck["OWNER"]) # Chỉ có owner
-        Depends(ClubRoleCheck["OWNER", "MEMBER"]) # owner và member
+        Depends(ClubRoleCheck("OWNER")) # Chỉ có owner
+        Depends(ClubRoleCheck("OWNER", "MEMBER")) # owner và member
     """
 
-    def __init__(self, allowed_roles: list[ClubRole]):
-        self.allowed_roles = allowed_roles
+    def __init__(self, *roles: ClubRole):
+        self.allowed_roles = roles
 
     def __call__(
         self,
-        club_id: Annotated[int, Path(description="ID của CLB trên URL (/{club_id})")],
+        request: Request,
         current_user: CurrentUser,
         db: DbSession,
     ) -> ClubMember:
@@ -141,12 +140,26 @@ class ClubRoleCheck:
         if current_user.role == SystemRole.ADMIN:
             return None
 
-        # Tìm thông tin thành viên câu lạc bộ
+        club_id = request.path_params.get("id") or request.path_params.get("club_id")
+        if not club_id:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Không tìm thất tham số id câu lạc bộ trên URL",
+            )
+
+        try:
+            club_id = int(club_id)  # Tránh nhập số
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="ID câu lạc bộ không hợp lệ.",
+            ) from e
+
         membership = (
             db.query(ClubMember)
             .filter(
-                ClubMember.club_id == club_id,
                 ClubMember.user_id == current_user.id,
+                ClubMember.club_id == club_id,
             )
             .first()
         )
@@ -154,15 +167,17 @@ class ClubRoleCheck:
         if not membership:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Bạn chưa tham gia câu lạc bộ này",
+                detail="Bạn chưa tham gia câu lạc bộ này.",
             )
 
-        # Kiểm tra vai trò trong CLB
-        if membership.role not in self.allowed_roles:
+        # 4. Kiểm tra vai trò trong CLB
+        user_role_str = membership.role
+        allowed_roles_str = [str(r) for r in self.allowed_roles]
+
+        if user_role_str not in allowed_roles_str:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=(
-                    f"Hành động yêu cầu một trong các quyền CLB: {self.allowed_roles!s}"
-                ),
+                detail=f"Hành động yêu cầu một trong các quyền CLB: {allowed_roles_str}",
             )
+
         return membership
