@@ -2,6 +2,8 @@
 app/services/club.py
 """
 
+from datetime import datetime, timezone
+
 from fastapi import HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -21,6 +23,7 @@ from app.schemas.club import (  # OWNER / MEMBER
 from app.services.activity_log import log_activity
 
 
+# Liên quan tới CLB
 def create_club(db: Session, club_in: CreateClub, current_user: User) -> Club:
     """Tạo CLB mới"""
 
@@ -86,7 +89,7 @@ def get_user_clubs(
             Club.description,
             Club.owner_id,
             Club.created_at,
-            ClubMember.role.label("user_role"), # tương đương với từ khóa AS tên_mới
+            ClubMember.role.label("user_role"),  # tương đương với từ khóa AS tên_mới
         )
         .join(ClubMember, Club.id == ClubMember.club_id)
         .filter(ClubMember.user_id == current_user.id)
@@ -112,7 +115,7 @@ def get_club_by_id(db: Session, club_id: int) -> dict:
     """Tìm chi tiết câu lạc bộ theo ID"""
 
     # Tìm câu lạc bộ
-    club = db.query(Club).filter(Club.id == club_id).first()
+    club = db.query(Club).filter(Club.id == club_id, Club.is_deleted.is_(False)).first()
     if not club:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Câu lạc bộ không tồn tại"
@@ -129,7 +132,7 @@ def update_club(
 ) -> Club:
     """Cập nhật club theo id"""
     # Kiểm tra có id club ko
-    club = db.query(Club).filter(Club.id == club_id).first()
+    club = db.query(Club).filter(Club.id == club_id, Club.is_deleted.is_(False)).first()
 
     if not club:
         raise HTTPException(
@@ -199,6 +202,35 @@ def delete_club(db: Session, club_id: int, current_user: User):
     db.commit()
 
 
+def is_deleted(db: Session, club_id: int, current_user: User):
+    """Xóa mềm CLB (OWNER)"""
+
+    # Lấy CLB chưa bị xóa mềm
+    club = db.query(Club).filter(Club.id == club_id, Club.is_deleted.is_(False)).first()
+
+    if not club:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Câu lạc bộ không tồn tại hoặc đã bị xóa",
+        )
+
+    club.is_deleted = True
+    club.deleted_at = datetime.now(timezone.utc)
+
+    log_activity(
+        db=db,
+        user_id=current_user.id,
+        club_id=club_id,
+        action=ActivityAction.DELETE_CLUB,
+        description=f"User {current_user.email} đã xóa(mềm) câu lạc bộ '{club.name}'",
+    )
+
+    db.commit()
+
+    return club
+
+
+# Liên quan tới thành viên CLB
 def add_membership(
     db: Session,
     club_id: int,
@@ -321,7 +353,7 @@ def delete_membership(
 
 def get_members(db: Session, club_id: int):
     """Lấy danh sách member"""
-    club = db.query(Club).filter(Club.id == club_id).first()
+    club = db.query(Club).filter(Club.id == club_id, Club.is_deleted.is_(False)).first()
     if not club:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Câu lạc bộ không tồn tại"
