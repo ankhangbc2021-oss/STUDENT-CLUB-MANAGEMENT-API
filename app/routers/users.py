@@ -3,7 +3,6 @@ app/routers/users.py
 User endpoints
 """
 
-from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy import or_
@@ -16,11 +15,6 @@ from app.schemas.user import UserListResponse, UserResponse
 
 router = APIRouter(prefix="/users", tags=["User"])
 
-# Khởi tạo Type Alias
-DbSession = Annotated[Session, Depends(get_db)]
-CurrentUser = Annotated[User, Depends(get_current_user)]
-RequireAdmin = Annotated[User, Depends(RoleChecker([SystemRole.ADMIN]))]
-
 
 @router.get(
     path="/me",
@@ -28,7 +22,7 @@ RequireAdmin = Annotated[User, Depends(RoleChecker([SystemRole.ADMIN]))]
     status_code=status.HTTP_200_OK,
     summary="Lấy thông tin cá nhân (không lộ password)",
 )
-def get_me(current_user: CurrentUser):
+def get_me(current_user: User = Depends(get_current_user)):
     """Lấy thông tin cá nhân"""
     return {
         "status_code": 200,
@@ -44,16 +38,16 @@ def get_me(current_user: CurrentUser):
     summary="Tìm kiếm & lấy danh sách người dùng chỉ Admin",
 )
 def get_users(
-    _: RequireAdmin,
-    db: DbSession,
-    q: Annotated[
-        str | None,
-        Query(description="Từ khóa tìm kiếm theo email hoặc full_name"),
-    ] = None,
-    is_active: Annotated[
-        bool | None,
-        Query(description="Lọc theo trạng thái tài khoản"),
-    ] = None,
+    q: str | None = Query(
+        default=None,
+        description="Từ khóa tìm kiếm theo email hoặc full_name",
+    ),
+    is_active: bool | None = Query(
+        default=None,
+        description="Lọc theo trạng thái tài khoản",
+    ),
+    _: User = Depends(RoleChecker([SystemRole.ADMIN])),
+    db: Session = Depends(get_db),
 ):
     """
     Danh sách/search người dùng (Chỉ cho Admin)
