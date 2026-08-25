@@ -134,9 +134,7 @@ class ClubRoleCheck:
         if current_user.role == SystemRole.ADMIN:
             return None
 
-        club_id = request.path_params.get("activity_id") or request.path_params.get(
-            "club_id"
-        )
+        club_id = request.path_params.get("id") or request.path_params.get("club_id")
         if not club_id:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -159,7 +157,11 @@ class ClubRoleCheck:
             )
             .first()
         )
-        existing_id = db.query(Club).filter(Club.id == club_id).first()
+        existing_id = (
+            db.query(Club)
+            .filter(Club.id == club_id, Club.is_deleted.is_(False))
+            .first()
+        )
 
         # Nếu không có CLB trả về 404
         if not existing_id:
