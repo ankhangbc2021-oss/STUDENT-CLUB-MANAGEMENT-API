@@ -24,9 +24,12 @@ from app.models.user import SystemRole, User
 # schemas
 from app.schemas.activity import (
     ActivityCreateResponse,
-    ActivityListResponse,
+    ActivityLimitOffsetResponse,
     ActivityPriority,
+    ActivitySortField,
+    ActivityStatus,
     CreateActivity,
+    SortOrder,
 )
 from app.schemas.activity_log import ActivityLogListResponse
 from app.schemas.club import (
@@ -317,14 +320,14 @@ def soft_delete_club(
 
 
 @router_activity.post(
-    path="/{activity_id}/activities",
+    path="/{club_id}/activities",
     response_model=ActivityCreateResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Thêm hoạt động CLB (thành viên và ADMIN)",
 )
 def new_activity(
     activity_in: CreateActivity,
-    activity_id: int = Path(..., description="Nhập ID CLB để thêm hoạt động"),
+    club_id: int = Path(..., description="Nhập ID CLB để thêm hoạt động"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     membership: ClubMember = Depends(ClubRoleCheck("OWNER", "MEMBER")),
@@ -332,7 +335,7 @@ def new_activity(
     """Tạo hoạt động mới cho CLB"""
     created_activity = activity_service.create_activity(
         db=db,
-        activity_id=activity_id,
+        club_id=club_id,
         activity_in=activity_in,
     )
 
@@ -343,28 +346,62 @@ def new_activity(
     }
 
 
-@router_activity.get(
-    path="/{activity_id}/activities",
-    response_model=ActivityListResponse,
+@router.get(
+    path="/{club_id}/activities",
+    response_model=ActivityLimitOffsetResponse,
     status_code=status.HTTP_200_OK,
-    summary="Lấy danh sách hoạt động của CLB (Thành viên và ADMIN)",
+    summary="Danh sách hoạt động CLB (Limit / Offset & Sort)",
 )
-def get_activity(
-    activity_id: int = Path(..., description="ID CLB cần lấy danh sách hoạt động"),
+def get_club_activities(
+    club_id: int = Path(..., description="ID của câu lạc bộ"),
+    limit: int = Query(
+        default=10,
+        ge=1,
+        le=100,
+        description="Số lượng bản ghi tối đa lấy về (1 - 100)",
+    ),
+    offset: int = Query(
+        default=0, ge=0, description="Vị trí bắt đầu lấy bản ghi (bỏ qua N mục)"
+    ),
+    assignee: str | None = Query(
+        default=None, description="Nhập ID của người được phân"
+    ),
+    search_title: str | None = Query(default=None, description="Nhập title cần tìm"),
     priority: ActivityPriority | None = Query(
-        default=None, description="Lọc theo mức độ ưu tiên (LOW/MEDIUM/HIGH)"
+        default=None, description="Lọc theo Priority (LOW/MEDIUM/HIGH)"
+    ),
+    status_filter: ActivityStatus | None = Query(
+        default=None, description="Lọc theo Status (TODO/IN_PROGRESS/DONE)"
+    ),
+    sort_by: ActivitySortField = Query(
+        default=ActivitySortField.CREATED_AT,
+        description="Trường sắp xếp (created_at hoặc due_date)",
+    ),
+    order: SortOrder = Query(
+        default=SortOrder.DESC,
+        description="Thứ tự sắp xếp (asc: tăng dần, desc: giảm dần)",
     ),
     db: Session = Depends(get_db),
-    _: ClubMember = Depends(ClubRoleCheck("OWNER", "MEMBER")),
+    _: User = Depends(ClubRoleCheck("OWNER", "MEMBER")),
 ):
-    """Lấy danh sách hoạt động của CLB có hỗ trợ lọc theo Priority"""
-
-    activitis = activity_service.get_activity(
-        db=db, activity_id=activity_id, priority=priority
+    """
+    Lấy danh sách hoạt động phân trang theo limit/offset:
+    """
+    result = activity_service.get_activity(
+        db=db,
+        club_id=club_id,
+        limit=limit,
+        offset=offset,
+        sort_by=sort_by,
+        order=order,
+        assignee=assignee,
+        search_title=search_title,
+        status_filter=status_filter,
+        priority=priority,
     )
 
     return {
         "status_code": status.HTTP_200_OK,
-        "message": "Lấy danh sách hoạt động của CLB thành công",
-        "data": activitis,
+        "message": "Lấy danh sách hoạt động thành công",
+        "data": result,
     }
