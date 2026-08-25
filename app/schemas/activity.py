@@ -75,7 +75,7 @@ class ActivityResponse(ActivityBase):
     id: int
     club_id: int
     created_at: datetime | None = None
-    assignee: UserShortResponse | None = None  
+    assignee: UserShortResponse | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -85,7 +85,7 @@ class ActivityCreateResponse(BaseModel):
 
     status_code: int
     message: str
-    data: ActivityResponseBase | None = None
+    data: ActivityResponseBase | None = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -95,6 +95,6 @@ class ActivityListResponse(BaseModel):
 
     status_code: int
     message: str
-    data: list[ActivityResponseBase] = [] 
+    data: list[ActivityResponseBase] = []
 
     model_config = ConfigDict(from_attributes=True)
