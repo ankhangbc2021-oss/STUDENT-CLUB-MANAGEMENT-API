@@ -332,7 +332,7 @@ def new_activity(
     """Tạo hoạt động mới cho CLB"""
     created_activity = activity_service.create_activity(
         db=db,
-        club_id=activity_id,
+        activity_id=activity_id,
         activity_in=activity_in,
     )
 
@@ -358,3 +358,13 @@ def get_activity(
     _: ClubMember = Depends(ClubRoleCheck("OWNER", "MEMBER")),
 ):
     """Lấy danh sách hoạt động của CLB có hỗ trợ lọc theo Priority"""
+
+    activitis = activity_service.get_activity(
+        db=db, activity_id=activity_id, priority=priority
+    )
+
+    return {
+        "status_code": status.HTTP_200_OK,
+        "message": "Lấy danh sách hoạt động của CLB thành công",
+        "data": activitis,
+    }
