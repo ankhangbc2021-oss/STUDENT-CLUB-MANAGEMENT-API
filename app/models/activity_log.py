@@ -27,9 +27,12 @@ class ActivityAction(str, Enum):
     - ACCOUNT_LOCKED
     """
 
+    # CLB
     CREATE_CLUB = "CREATE_CLUB"
     UPDATE_CLUB = "UPDATE_CLUB"
     DELETE_CLUB = "DELETE_CLUB"
+
+    # Thành viên
     ADD_MEMBER = "ADD_MEMBER"
     REMOVE_MEMBER = "REMOVE_MEMBER"
     UPDATE_MEMBER_ROLE = "UPDATE_MEMBER_ROLE"
