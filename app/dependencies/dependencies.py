@@ -2,8 +2,6 @@
 app/dependencies/dependencies.py
 """
 
-from typing import Annotated
-
 import jwt
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -22,14 +20,10 @@ from app.schemas.user import SystemRole
 
 reusable_oauth2 = HTTPBearer()  # Đọc header Authrization(tự ktra resquest có gửi ko)
 
-# Khai báo Type Alias
-DbSession = Annotated[Session, Depends(get_db)]
-AuthCreadentials = Annotated[HTTPAuthorizationCredentials, Depends(reusable_oauth2)]
-
 
 async def get_current_user(
-    credentials: AuthCreadentials,
-    db: DbSession,
+    credentials: HTTPAuthorizationCredentials = Depends(reusable_oauth2),
+    db: Session = Depends(get_db),
 ) -> User:
     """
     Dependency cốt lõi: Giải mã JWT từ Header, kiểm tra tính toàn vẹn,
@@ -85,10 +79,6 @@ async def get_current_user(
     return user
 
 
-# Khai báo Type Alias
-CurrentUser = Annotated[User, Depends(get_current_user)]
-
-
 class RoleChecker:
     """
     Class Deependency dùng để phân quyền theo vai trò
@@ -103,7 +93,7 @@ class RoleChecker:
         # Lưu danh sách role được phéo vô
         self.allowed_roles = allowed_roles
 
-    def __call__(self, current_user: CurrentUser):
+    def __call__(self, current_user: User = Depends(get_current_user)):
         # Lấy tên role
         user_role_name = current_user.role if current_user.role else None
 
@@ -136,15 +126,17 @@ class ClubRoleCheck:
     def __call__(
         self,
         request: Request,
-        current_user: CurrentUser,
-        db: DbSession,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db),
     ) -> ClubMember:
 
         # Nếu là Admin -> Bỏ qua vì có toàn quyền
         if current_user.role == SystemRole.ADMIN:
             return None
 
-        club_id = request.path_params.get("id") or request.path_params.get("club_id")
+        club_id = request.path_params.get("activity_id") or request.path_params.get(
+            "club_id"
+        )
         if not club_id:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
