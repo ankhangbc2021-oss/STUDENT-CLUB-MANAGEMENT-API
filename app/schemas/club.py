@@ -49,7 +49,7 @@ class ClubResponse(BaseModel):
 
     status_code: int
     message: str | None = None
-    data: ClubResponseBase | None = None
+    data: ClubResponseBase | None = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -107,7 +107,7 @@ class ClubMemberResponse(BaseModel):
 
     status_code: int
     message: str | None = None
-    data: ClubMemberData | None = None
+    data: ClubMemberData | None = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -117,6 +117,6 @@ class ClubAddMemberResponse(BaseModel):
 
     status_code: int
     message: str | None = None
-    data: MemberInfo
+    data: MemberInfo | None = []
 
     model_config = ConfigDict(from_attributes=True)
