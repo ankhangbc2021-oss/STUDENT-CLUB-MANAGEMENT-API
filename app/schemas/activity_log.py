@@ -25,4 +25,4 @@ class ActivityLogListResponse(BaseModel):
 
     status_code: int = 200
     message: str
-    data: list[ActivityLogBase]
+    data: list[ActivityLogBase] | None = []
