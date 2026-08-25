@@ -8,7 +8,7 @@ Có 2 Schemas Gồm Club / ClubMember
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict, Field, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class ClubRole(str, Enum):
