@@ -86,21 +86,24 @@ app.include_router(auth.router)
 # Nhúng router xử lý activity
 app.include_router(activity.router)
 
-# Nhúng router xử lý club
+# Nhúng router xử lý club (chia cho dễ xử lý)
 app.include_router(club.router)
+app.include_router(club.router_log)
+app.include_router(club.router_member)
+app.include_router(club.router_activity)
 
 # Nhúng router xử lý users
 app.include_router(users.router)
 
 
 # HEALTH-CHECK ENDPOINT
-@app.get("/health", tags=["Root"])
+@app.get("/health", tags=["Root"], summary="Kiểm tra sever có hoạt động không")
 def health_check():
     """Kiểm tra sever còn hoạt động không"""
     return {"status": "healthy", "message": "Sever FastAPI đang hoạt động bình thường"}
 
 
-@app.get("/", tags=["Root"])
+@app.get("/", tags=["Root"], summary="Chào mừng")
 def root():
     """Mặc định"""
     return {
