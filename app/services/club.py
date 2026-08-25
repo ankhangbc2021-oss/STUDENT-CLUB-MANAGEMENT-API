@@ -79,7 +79,7 @@ def get_user_clubs(
     current_user: User,
     search: str | None = None,
 ) -> list[dict]:
-    """Lấy danh sách CLB"""
+    """Lấy danh sách CLB (TV)"""
 
     # Query kết hợp Club và ClubMember dựa theo user_id
     query = (
@@ -92,7 +92,7 @@ def get_user_clubs(
             ClubMember.role.label("user_role"),  # tương đương với từ khóa AS tên_mới
         )
         .join(ClubMember, Club.id == ClubMember.club_id)
-        .filter(ClubMember.user_id == current_user.id)
+        .filter(ClubMember.user_id == current_user.id or current_user.role == "ADMIN")
     )
 
     if not query.all():
@@ -322,18 +322,18 @@ def delete_membership(
         .first()
     )
 
-    # Kiểm tra role
-    if club_member.role == ClubRole.OWNER:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"ID: {user_id} là OWNER không thể xóa khỏi CLB",
-        )
-
     # Kiểm tra có thành viên trong CLB
     if not club_member:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"CLB {existing_club.name} không có thành viên có ID là: {user_id}",
+        )
+
+    # Kiểm tra role
+    if club_member.role == ClubRole.OWNER:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"ID: {user_id} là OWNER không thể xóa khỏi CLB",
         )
 
     # Viết log
