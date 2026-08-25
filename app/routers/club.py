@@ -346,7 +346,7 @@ def new_activity(
     }
 
 
-@router.get(
+@router_activity.get(
     path="/{club_id}/activities",
     response_model=ActivityLimitOffsetResponse,
     status_code=status.HTTP_200_OK,
