@@ -1,9 +1,7 @@
 """
 app/routers/club.py
-Câu lạc bộ/Member endpoints
+Câu lạc bộ/Member/Activity endpoints
 """
-
-from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Query, status
 from sqlalchemy.orm import Session
@@ -12,16 +10,24 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db
 
 # dependencies
-from app.dependencies.dependencies import ClubRoleCheck
+from app.dependencies.dependencies import (
+    ClubRoleCheck,
+    RoleChecker,
+    get_current_user,
+)
 
 # models
 from app.models.activity_log import ActivityLog
 from app.models.club import ClubMember
-
-# routers
-from app.routers.users import CurrentUser, DbSession, RequireAdmin
+from app.models.user import SystemRole, User
 
 # schemas
+from app.schemas.activity import (
+    ActivityCreateResponse,
+    ActivityListResponse,
+    ActivityPriority,
+    CreateActivity,
+)
 from app.schemas.activity_log import ActivityLogListResponse
 from app.schemas.club import (
     ClubAddMemberResponse,
@@ -34,29 +40,32 @@ from app.schemas.club import (
 )
 
 # services
+from app.services import activity as activity_service
 from app.services import club as club_service
 
+# Chia router cho đẹp
 router = APIRouter(prefix="/clubs", tags=["Club"])
+router_log = APIRouter(prefix="/clubs", tags=["Club Log"])
+router_member = APIRouter(prefix="/clubs", tags=["Club Member"])
+router_activity = APIRouter(prefix="/clubs", tags=["Club Activity"])
 
-# Tạo Type Alias
-RequireOwner = Annotated[ClubMember, Depends(ClubRoleCheck("OWNER"))]
+# ---------------------------------------
+# --------------- Log -------------------
+# ---------------------------------------
 
 
-# ---- Log ----
-# Lấy log khi thêm xóa sửa...
-@router.get(
+@router_log.get(
     path="/log",
     response_model=ActivityLogListResponse,
     status_code=status.HTTP_200_OK,
     summary="Lấy log (Chỉ ADMIN)",
 )
 def get_log(
-    _: RequireAdmin,
-    db: DbSession,
-    club_id: Annotated[int | None, Query(description="Lọc theo CLB")] = None,
+    club_id: int | None = Query(default=None, description="Lọc theo CLB"),
+    _: User = Depends(RoleChecker([SystemRole.ADMIN])),
+    db: Session = Depends(get_db),
 ):
     """Lấy log ACTIVITY"""
-
     query = db.query(ActivityLog).order_by(ActivityLog.created_at.desc())
 
     if club_id:
@@ -74,23 +83,26 @@ def get_log(
 # ---------------------------------------
 
 
-# Tạo câu lạc bộ mới
+# Club
 @router.post(
     path="",
     response_model=ClubResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Tạo câu lạc bộ mới (Người tạo tự động thành OWNER)",
 )
-def create_new_club(payload: CreateClub, db: DbSession, current_user: CurrentUser):
+def create_new_club(
+    club_in: CreateClub,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """
     Tạo câu lạc bộ mới:
     - Yêu cầu đăng nhập (JWT Bearer token)
     - Người tạo tự động gán OWNER
     - Tự động ghi nhận vào Activity Log
     """
-
     club_new = club_service.create_club(
-        db=db, club_in=payload, current_user=current_user
+        db=db, club_in=club_in, current_user=current_user
     )
 
     return {
@@ -100,61 +112,52 @@ def create_new_club(payload: CreateClub, db: DbSession, current_user: CurrentUse
     }
 
 
-# Lấy danh sách CLB
 @router.get(
     path="",
     response_model=ClubResponseList,
     status_code=status.HTTP_200_OK,
-    summary="Lấy danh sách CLB của tôi (OWNER/MEMBER)",
+    summary="Lấy danh sách CLB của tôi (Thành viên và ADMIN)",
 )
 def get_my_clubs(
-    db: DbSession,
-    current_user: CurrentUser,
-    search: str | None = Query(None, description="Tìm kiếm theo tên câu lạc bộ"),
+    search: str | None = Query(
+        default=None, description="Tìm kiếm theo tên câu lạc bộ"
+    ),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
-    Lấy danh sách CLB
+    Lấy danh sách CLB:
     - Yêu cầu xác thực tài khoản
     - Chỉ trả về CLB mà người hiện tại là OWNER hoặc MEMBER
-    - Hỗ trợ tìm kiếm search
+    - Hỗ trợ tìm kiếm theo tên
     """
-
     get_clubs = club_service.get_user_clubs(
         db=db, current_user=current_user, search=search
     )
 
-    if not get_clubs:
-        return {
-            "status_code": status.HTTP_404_NOT_FOUND,
-            "message": f"Không tìm thấy tên CLB là: {search}",
-            "data": [],
-        }
-
     return {
         "status_code": status.HTTP_200_OK,
         "message": "Lấy danh sách câu lạc bộ thành công",
-        "data": get_clubs,
+        "data": get_clubs or [],
     }
 
 
-# Xem chi tiết CLB
 @router.get(
     path="/{club_id}",
     response_model=ClubResponse,
     status_code=status.HTTP_200_OK,
-    summary="Lấy chi tiết CLB (Chỉ dành cho thành viên)",
+    summary="Lấy chi tiết CLB (thành viên và ADMIN)",
 )
 def get_club_detail(
-    db: DbSession,
-    _: None = Depends(ClubRoleCheck("OWNER", "MEMBER")),
     club_id: int = Path(..., description="ID của câu lạc bộ cần xem"),
+    db: Session = Depends(get_db),
+    _: ClubMember = Depends(ClubRoleCheck("OWNER", "MEMBER")),
 ):
     """
     Xem chi tiết CLB:
     - Bắt buộc đăng nhập
     - Trả về 404 nếu không tìm thấy CLB
     - Trả về 403 Forbidden nếu người dùng không thuộc CLB này
-    - Trả về thông tin CLB
     """
     club_data = club_service.get_club_by_id(db=db, club_id=club_id)
 
@@ -165,7 +168,6 @@ def get_club_detail(
     }
 
 
-# Cập nhật CLB
 @router.put(
     path="/{club_id}",
     response_model=ClubResponse,
@@ -173,30 +175,26 @@ def get_club_detail(
     summary="Cập nhật CLB theo id (Chỉ cho OWNER và ADMIN)",
 )
 def update_club_by_id(
-    db: DbSession,
     club_in: UpdateClub,
-    current_user: CurrentUser,
-    _: RequireOwner,
     club_id: int = Path(..., description="ID của câu lạc bộ cần cập nhật"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _: ClubMember = Depends(ClubRoleCheck("OWNER")),
 ):
     """
-    Cập nhật CLB (ADMIN luôn được qua)
-    - Nhận vào id của CLB
-    - Kiểm tra CLB có tồn tại không
+    Cập nhật CLB (Chỉ OWNER hoặc ADMIN)
     """
-
-    update_club = club_service.update_club(
+    updated_club = club_service.update_club(
         db=db, club_id=club_id, club_in=club_in, current_user=current_user
     )
 
     return {
         "status_code": status.HTTP_200_OK,
         "message": "Cập nhật thành công",
-        "data": update_club,
+        "data": updated_club,
     }
 
 
-# Xóa CLB
 @router.delete(
     path="/{club_id}",
     response_model=ClubResponse,
@@ -204,18 +202,12 @@ def update_club_by_id(
     summary="Xóa CLB (Chỉ OWNER và ADMIN)",
 )
 def delete_club_by_id(
-    db: DbSession,
-    current_user: CurrentUser,
-    _: RequireOwner,
     club_id: int = Path(..., description="ID của CLB cần xóa (OWNER)"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _: ClubMember = Depends(ClubRoleCheck("OWNER")),
 ):
-    """
-    Xóa CLB (ADMIN luôn được qua)
-    - Nhập ID của CLB
-    - Kiểm tra CLB có tồn tại không, nếu không trả về 404
-    - Trả về thông báo xóa thành công
-    """
-
+    """Xóa CLB (Soft delete hoặc Hard delete)"""
     club_service.delete_club(db=db, club_id=club_id, current_user=current_user)
 
     return {
@@ -225,119 +217,144 @@ def delete_club_by_id(
     }
 
 
-# Thêm thành viên
-@router.post(
+# Member
+@router_member.post(
     path="/{club_id}/members",
     response_model=ClubAddMemberResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Thêm thành viên mới (chỉ OWNER)",
 )
 def add_member(
-    db: DbSession,
-    current_user: CurrentUser,
-    _: RequireOwner,
     club_in: CreateClubMember,
     club_id: int = Path(..., description="Nhập ID của CLB để thêm thành viên"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _: ClubMember = Depends(ClubRoleCheck("OWNER")),
 ):
-    """
-    Thêm thành viên (Chỉ OWNER) (ADMIN luôn được qua)
-    - Nhập ID của CLB
-    - Kiểm tra CLB có tồn tại không
-    - Nhập thông tin cần thêm
-    - Trả về thông báo thêm thành công
-    """
-
+    """Thêm thành viên mới vào CLB (Chỉ OWNER)"""
     new_member = club_service.add_membership(
         db=db, club_id=club_id, club_in=club_in, current_user=current_user
     )
 
     return {
         "status_code": status.HTTP_201_CREATED,
-        "message": f"Thêm thành viên có ID: {current_user.id} vào CLB thành công",
+        "message": f"Thêm thành viên vào CLB thành công",
         "data": new_member,
     }
 
 
-# Xóa thành viên
-@router.delete(
+@router_member.delete(
     path="/{club_id}/members/{user_id}",
     response_model=ClubMemberResponse,
     status_code=status.HTTP_200_OK,
-    summary="Xóa thành viên của CLB (Không xóa được OWNER chỉ xóa được MEMBER)",
+    summary="Xóa thành viên của CLB (Không xóa được OWNER)",
 )
 def delete_member(
-    db: DbSession,
-    _: RequireOwner,
-    current_user: CurrentUser,
     club_id: int = Path(..., description="Nhập ID CLB cần xóa"),
     user_id: int = Path(..., description="Nhập ID người dùng cần xóa"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _: ClubMember = Depends(ClubRoleCheck("OWNER")),
 ):
-    """
-    Xóa thành viên
-    - Nhận ID của CLB
-    - Nhập ID của người dùng
-    - Kiểm tra CLB và người dùng có tồn tại không
-    - Kiểm tra CLB có thành viên này không
-    """
-
+    """Xóa thành viên khỏi CLB"""
     club_service.delete_membership(
         db=db, club_id=club_id, user_id=user_id, current_user=current_user
     )
 
     return {
         "status_code": status.HTTP_200_OK,
-        "message": f"Đã xóa thành công thành viên ID là: {user_id}",
+        "message": f"Đã xóa thành công thành viên ID: {user_id}",
         "data": None,
     }
 
 
-# Lấy danh sách thành viên
-@router.get(
+@router_member.get(
     path="/{club_id}/members",
     response_model=ClubMemberResponse,
     status_code=status.HTTP_200_OK,
-    summary="Lấy danh sách thành viên (Chỉ dành cho thành viên)",
+    summary="Lấy danh sách thành viên (Chỉ dành cho thành viên CLB)",
 )
 def get_members(
-    db: DbSession,
-    _: None = Depends(ClubRoleCheck("OWNER", "MEMBER")),
     club_id: int = Path(..., description="ID của câu lạc bộ cần xem"),
+    db: Session = Depends(get_db),
+    _: ClubMember = Depends(ClubRoleCheck("OWNER", "MEMBER")),
 ):
-    """
-    Xem danh sách thành viên CLB
-    - Bắt buộc đăng nhập
-    - Trả về 404 nếu không tìm thấy CLB
-    - Trả về 403 Forbidden nếu người dùng không thuộc CLB này
-    - Trả về thông tin CLB kèm danh sách thành viên nếu hợp lệ
-    """
-    club_member = club_service.get_members(db=db, club_id=club_id)
+    """Lấy danh sách thành viên trong CLB"""
+    members = club_service.get_members(db=db, club_id=club_id)
 
     return {
         "status_code": status.HTTP_200_OK,
-        "message": f"Lấy danh sách thành viên câu lạc bộ có ID là: {club_id} thành công",
-        "data": club_member,
+        "message": f"Lấy danh sách thành viên câu lạc bộ ID {club_id} thành công",
+        "data": members,
     }
 
 
-# Xóa mềm CLB
 @router.delete(
     path="/deleted/{club_id}",
     response_model=ClubResponse,
     status_code=status.HTTP_200_OK,
-    summary="Xóa CLB mền (vẫn có trong DB)",
+    summary="Xóa mềm CLB",
 )
-def is_deleted(
-    db: DbSession,
-    current_user: CurrentUser,
-    _: RequireOwner,
-    club_id: int = Path(..., description="Nhập ID CLB để xóa mền"),
+def soft_delete_club(
+    club_id: int = Path(..., description="Nhập ID CLB để xóa mềm"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _: ClubMember = Depends(ClubRoleCheck("OWNER")),
 ):
-    """Xóa CLB mềm"""
-
+    """Xóa mềm CLB (đánh dấu is_deleted=True)"""
     club_service.is_deleted(db=db, club_id=club_id, current_user=current_user)
-    
+
     return {
         "status_code": status.HTTP_200_OK,
         "message": "Xóa mềm thành công",
         "data": None,
     }
+
+
+# ---------------------------------------
+# -------------- Activity ---------------
+# ---------------------------------------
+
+
+@router_activity.post(
+    path="/{activity_id}/activities",
+    response_model=ActivityCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Thêm hoạt động CLB (thành viên và ADMIN)",
+)
+def new_activity(
+    activity_in: CreateActivity,
+    activity_id: int = Path(..., description="Nhập ID CLB để thêm hoạt động"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    membership: ClubMember = Depends(ClubRoleCheck("OWNER", "MEMBER")),
+):
+    """Tạo hoạt động mới cho CLB"""
+    created_activity = activity_service.create_activity(
+        db=db,
+        club_id=activity_id,
+        activity_in=activity_in,
+    )
+
+    return {
+        "status_code": status.HTTP_201_CREATED,
+        "message": "Tạo mới hoạt động thành công",
+        "data": created_activity,
+    }
+
+
+@router_activity.get(
+    path="/{activity_id}/activities",
+    response_model=ActivityListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Lấy danh sách hoạt động của CLB (Thành viên và ADMIN)",
+)
+def get_activity(
+    activity_id: int = Path(..., description="ID CLB cần lấy danh sách hoạt động"),
+    priority: ActivityPriority | None = Query(
+        default=None, description="Lọc theo mức độ ưu tiên (LOW/MEDIUM/HIGH)"
+    ),
+    db: Session = Depends(get_db),
+    _: ClubMember = Depends(ClubRoleCheck("OWNER", "MEMBER")),
+):
+    """Lấy danh sách hoạt động của CLB có hỗ trợ lọc theo Priority"""
