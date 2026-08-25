@@ -5,7 +5,7 @@ app/services/club.py
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 # models
@@ -92,7 +92,9 @@ def get_user_clubs(
             ClubMember.role.label("user_role"),  # tương đương với từ khóa AS tên_mới
         )
         .join(ClubMember, Club.id == ClubMember.club_id)
-        .filter(ClubMember.user_id == current_user.id or current_user.role == "ADMIN")
+        .filter(
+            or_(ClubMember.user_id == current_user.id, current_user.role == "ADMIN")
+        )
     )
 
     if not query.all():
