@@ -3,8 +3,6 @@ app/routers/auth.py
 Register/Login
 """
 
-from typing import Annotated
-
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
@@ -23,7 +21,6 @@ from app.services import auth
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 # Khai báo Type dùng chung
-DbSession = Annotated[Session, Depends(get_db)]
 
 
 @router.post(
@@ -32,7 +29,7 @@ DbSession = Annotated[Session, Depends(get_db)]
     status_code=status.HTTP_201_CREATED,
     summary="Đăng ký tài khoản",
 )
-def create_user(data: UserCreate, db: DbSession):
+def create_user(data: UserCreate, db: Session = Depends(get_db)):
     """
     Endpoint Đăng ký tài khoản:
     - Nhận thông tin email, password, role, fullname
@@ -51,7 +48,7 @@ def create_user(data: UserCreate, db: DbSession):
     summary="Đăng nhập và nhận JWT",
 )
 @limiter.limit("5/minute")  # Giới hạn 5 lần / phút mối IP
-def login(request: Request, data: UserLogin, db: DbSession):
+def login(request: Request, data: UserLogin, db: Session = Depends(get_db)):
     """
     Endpoint Đăng nhập:
     - Kiểm tra giới hạn rate limit & khóa tài khoản
@@ -96,7 +93,7 @@ def login(request: Request, data: UserLogin, db: DbSession):
     status_code=status.HTTP_200_OK,
     summary="Cấp lại access token",
 )
-def refresh_token(payload: RefreshTokenRequest, db: DbSession):
+def refresh_token(payload: RefreshTokenRequest, db: Session = Depends(get_db)):
     """
     Cấp lại Access Token mới từ Refresh Token:
     1. Kiểm tra tính hợp lệ và thời hạn của refresh token
