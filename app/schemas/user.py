@@ -27,7 +27,6 @@ class UserCreate(UserBase):
 
     full_name: str = Field(..., min_length=1)
     password: str = Field(..., min_length=1)
-    role: SystemRole = SystemRole.USER
 
 
 class UserUpdate(UserBase):
