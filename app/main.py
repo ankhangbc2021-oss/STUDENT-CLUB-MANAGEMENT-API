@@ -67,10 +67,10 @@ async def validation_error_handler(
 ):
     """Lỗi 400"""
     return JSONResponse(
-        status_code=status.HTTP_400_BAD_REQUEST,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content={
             "success": False,
-            "status_code": status.HTTP_400_BAD_REQUEST,
+            "status_code": status.HTTP_422_UNPROCESSABLE_CONTENT,
             "message": "Dữ liệu request không hợp lệ",
             "errors": exc.errors(),
         },
