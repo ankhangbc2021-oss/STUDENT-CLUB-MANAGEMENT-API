@@ -130,10 +130,6 @@ class ClubRoleCheck:
         db: Session = Depends(get_db),
     ) -> ClubMember:
 
-        # Nếu là Admin -> Bỏ qua vì có toàn quyền
-        if current_user.role == SystemRole.ADMIN:
-            return None
-
         club_id = request.path_params.get("id") or request.path_params.get("club_id")
         if not club_id:
             raise HTTPException(
