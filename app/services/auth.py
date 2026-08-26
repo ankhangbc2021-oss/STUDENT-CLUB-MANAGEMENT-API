@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core import security
 from app.models.user import User
-from app.schemas.user import RefreshTokenRequest, UserCreate, UserLogin
+from app.schemas.user import RefreshTokenRequest, UserCreate, UserLogin, SystemRole
 
 
 def create_user(db: Session, user_data: UserCreate):
@@ -33,7 +33,7 @@ def create_user(db: Session, user_data: UserCreate):
         email=user_data.email,
         password_hash=hashed_password,
         full_name=user_data.full_name,
-        role=user_data.role,
+        role=SystemRole.USER,
     )
 
     db.add(new_user)
