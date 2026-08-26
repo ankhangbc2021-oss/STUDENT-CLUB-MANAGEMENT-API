@@ -10,16 +10,14 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db
 
 # dependencies
-from app.dependencies.dependencies import ClubRoleCheck, RoleChecker, get_current_user
+from app.dependencies.dependencies import get_current_user
 
 # model
-from app.models.activity import ClubActivity
 from app.models.user import User
 
 # schemas
 from app.schemas.activity import (
     ActivityDetailResponse,
-    ActivityListResponse,
     UpdateActivity,
 )
 
@@ -33,7 +31,7 @@ router = APIRouter(prefix="/activities", tags=["Club Activity"])
     path="/{activity_id}",
     response_model=ActivityDetailResponse,
     status_code=status.HTTP_200_OK,
-    summary="Lấy chi tiết hoạt động của CLB (Thành viên và ADMIN)",
+    summary="Lấy chi tiết hoạt động của CLB (Thành viên)",
 )
 def get_acivitis_deltail(
     activity_id: int = Path(
@@ -63,7 +61,7 @@ def get_acivitis_deltail(
     path="/{activity_id}",
     response_model=ActivityDetailResponse,
     status_code=status.HTTP_200_OK,
-    summary="Cập nhật hoạt động CLB (OWNER và ADMIN và assignee_id(Người được phân))",
+    summary="Cập nhật hoạt động CLB (OWNER, assignee_id(Người được phân))",
 )
 def put_update_activity(
     activity_id: int = Path(..., description="Nhập ID hoạt động cần cập nhật"),
@@ -93,7 +91,7 @@ def put_update_activity(
     path="/{activity_id}",
     response_model=ActivityDetailResponse,
     status_code=status.HTTP_200_OK,
-    summary="Xóa hoạt động CLB (OWNER, ADMIN)",
+    summary="Xóa hoạt động CLB (OWNER)",
 )
 def delete_activity(
     activity_id: int = Path(..., description="ID hoạt động của CLB cần xóa"),
@@ -102,7 +100,7 @@ def delete_activity(
 ):
     """
     Xóa hoạt động:
-    - Bắt buộc kiểm tra quyền ( Owner hoặc Admin)
+    - Bắt buộc kiểm tra quyền ( Owner)
     - Trả về response chuẩn dạng bọc
     """
     activity_services.delete_activity(

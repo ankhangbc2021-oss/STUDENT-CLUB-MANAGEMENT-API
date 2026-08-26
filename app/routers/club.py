@@ -334,9 +334,7 @@ def new_activity(
 ):
     """Tạo hoạt động mới cho CLB"""
     created_activity = activity_service.create_activity(
-        db=db,
-        club_id=club_id,
-        activity_in=activity_in,
+        db=db, club_id=club_id, activity_in=activity_in, current_user=current_user
     )
 
     return {
