@@ -60,20 +60,20 @@ def _get_activity_and_verify_access(
         )
 
     membership = None
-    if current_user.role != SystemRole.ADMIN:
-        membership = (
-            db.query(ClubMember)
-            .filter(
-                ClubMember.club_id == activity.club_id,
-                ClubMember.user_id == current_user.id,
-            )
-            .first()
+
+    membership = (
+        db.query(ClubMember)
+        .filter(
+            ClubMember.club_id == activity.club_id,
+            ClubMember.user_id == current_user.id,
         )
-        if not membership:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Bạn không phải là thành viên của câu lạc bộ này.",
-            )
+        .first()
+    )
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không phải là thành viên của câu lạc bộ này.",
+        )
 
     return activity, membership
 
@@ -100,7 +100,10 @@ def _validate_assignee(db: Session, club_id: int, assignee_id: int | None) -> No
 
 
 def create_activity(
-    db: Session, club_id: int, activity_in: CreateActivity
+    db: Session,
+    club_id: int,
+    activity_in: CreateActivity,
+    current_user: User,
 ) -> ClubActivity:
     """Tạo hoạt động cho CLB (Thành viên)"""
 
@@ -118,6 +121,7 @@ def create_activity(
         description=activity_in.description,
         due_date=activity_in.due_date,
         priority=activity_in.priority,
+        assignee_id=current_user.id,
     )
 
     db.add(new_activity)
@@ -227,19 +231,18 @@ def get_activity_deltail(
 def update_activity(
     db: Session, activity_id: int, activity_in: UpdateActivity, current_user: User
 ):
-    """Cập nhật hoạt động CLB (OWNER/ADMIN/assignee_id)"""
+    """Cập nhật hoạt động CLB (OWNER/assignee_id)"""
 
     activity, membership = _get_activity_and_verify_access(
         db=db, activity_id=activity_id, current_user=current_user
     )
 
     # Kiểm tra người dùng
-    is_admin = current_user.role == SystemRole.ADMIN
     is_owner = membership.role == ClubRole.OWNER
     is_assignee = activity.assignee_id == current_user.id
     # print(1==1)
     # Kiểm tra quyền thao tác
-    if not (is_admin or is_owner or is_assignee):
+    if not (is_owner or is_assignee):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Bạn không có quyền chỉnh sửa hoạt động này.",
@@ -264,21 +267,21 @@ def update_activity(
 
         allowed_transitions = VALID_STATUS_TRANSITIONS.get(old_status, [])
 
-        if new_status not in allowed_transitions and not (is_admin or is_owner):
+        if new_status not in allowed_transitions and not (is_owner):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Không thể chuyển workflow từ '{old_status}' sang '{new_status}'",
             )
 
-        # Chỉ OWNER hoặc ADMIN mới lặp lại từ DONE -> TODO
+        # Chỉ OWNER mới lặp lại từ DONE -> TODO
         if (
             old_status == ActivityStatus.DONE
             and new_status == ActivityStatus.TODO
-            and not (is_admin or is_owner)
+            and not is_owner
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Chỉ Ban Quản Trị (OWNER/ADMIN) mới được mở lại hoạt động đã hoàn thành.",
+                detail="Chỉ Ban Quản Trị (OWNER) mới được mở lại hoạt động đã hoàn thành.",
             )
 
     # Gán giá trị vào Model hoạt động
@@ -295,18 +298,17 @@ def delete_activity(
     activity_id: int,
     current_user: User,
 ) -> None:
-    """Xóa hoạt động CLB (OWNER/ADMIN)"""
+    """Xóa hoạt động CLB (OWNER)"""
 
     activity, membership = _get_activity_and_verify_access(
         db=db, activity_id=activity_id, current_user=current_user
     )
 
-    is_admin = current_user.role == SystemRole.ADMIN
     is_owner = membership and membership.role == ClubRole.OWNER
 
     # Chỉ Owner hoặc Admin mới xóa được
 
-    if not (is_admin or is_owner):
+    if not (is_owner):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Bạn không có quyền xóa hoạt động này",
@@ -319,16 +321,15 @@ def delete_activity(
 def assign_activity_member(
     db: Session, activity_id: int, activity_in: AssignActivity, current_user: User
 ) -> ClubActivity:
-    """Phân công viêc cho thành viên (Admin hoặc Owner)"""
+    """Phân công viêc cho thành viên ( Owner)"""
 
     activity, membership = _get_activity_and_verify_access(
         db=db, activity_id=activity_id, current_user=current_user
     )
 
-    is_admin = current_user.role == SystemRole.ADMIN
     is_owner = membership and membership.role == ClubRole.OWNER
 
-    if not (is_admin or is_owner):
+    if not (is_owner):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Bạn không có quyền phân công người khác",
