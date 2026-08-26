@@ -87,8 +87,8 @@ app.include_router(auth.router)
 app.include_router(activity.router)
 
 # Nhúng router xử lý club (chia cho dễ xử lý)
-app.include_router(club.router)
 app.include_router(club.router_log)
+app.include_router(club.router)
 app.include_router(club.router_member)
 app.include_router(club.router_activity)
 
