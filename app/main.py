@@ -65,7 +65,7 @@ async def validation_error_handler(
     _request: Request,
     exc: RequestValidationError,
 ):
-    """Lỗi 400"""
+    """Lỗi 422"""
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content={
