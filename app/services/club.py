@@ -282,7 +282,7 @@ def add_membership(
     new_member = ClubMember(
         club_id=club_id,
         user_id=club_in.user_id,
-        role=club_in.role,
+        role=ClubRole.MEMBER,
     )
 
     db.add(new_member)
