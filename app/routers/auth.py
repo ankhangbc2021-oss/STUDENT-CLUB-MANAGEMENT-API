@@ -32,7 +32,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 def create_user(data: UserCreate, db: Session = Depends(get_db)):
     """
     Endpoint Đăng ký tài khoản:
-    - Nhận thông tin email, password, role, fullname
+    - Nhận thông tin email, password, fullname(Mặc định role là USER)
     - Gọi service để xử lý
     - Trả về thông tin UserResponse
     """
