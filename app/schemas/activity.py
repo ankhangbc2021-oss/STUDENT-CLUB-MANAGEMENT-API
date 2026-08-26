@@ -61,9 +61,6 @@ class ActivityBase(BaseModel):
 class CreateActivity(ActivityBase):
     """Tạo mới POST"""
 
-    assignee_id: int | None = Field(
-        default=None, description="ID người được phân công (nếu có)"
-    )
 
 
 class ActivityResponseBase(ActivityBase):
