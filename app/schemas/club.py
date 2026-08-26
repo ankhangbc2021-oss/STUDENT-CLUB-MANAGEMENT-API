@@ -73,7 +73,6 @@ class ClubMemberBase(BaseModel):
     """Lớp cơ bản ClubMember"""
 
     user_id: int = Field(...)
-    role: ClubRole = ClubRole.MEMBER
 
 
 class CreateClubMember(ClubMemberBase):

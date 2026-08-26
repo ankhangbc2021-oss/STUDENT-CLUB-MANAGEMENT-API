@@ -151,14 +151,14 @@ class AssignActivity(BaseModel):
     )
 
 
-class UpdateStatus(BaseModel):
-    """Lớp cập nhật status"""
+# class UpdateStatus(BaseModel):
+#     """Lớp cập nhật status"""
 
-    status: ActivityStatus = Field(
-        ...,
-        description="Trạng thái mới (TODO, IN_PROGRESS, DONE)",
-        examples=["IN_PROGRESS"],
-    )
+#     status: ActivityStatus = Field(
+#         ...,
+#         description="Trạng thái mới (TODO, IN_PROGRESS, DONE)",
+#         examples=["IN_PROGRESS"],
+#     )
 
 
 # Limit/Offset
