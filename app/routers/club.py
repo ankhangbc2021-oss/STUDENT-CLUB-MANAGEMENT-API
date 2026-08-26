@@ -119,7 +119,7 @@ def create_new_club(
     path="",
     response_model=ClubResponseList,
     status_code=status.HTTP_200_OK,
-    summary="Lấy danh sách CLB của tôi (Thành viên và ADMIN)",
+    summary="Lấy danh sách CLB của tôi (Thành viên)",
 )
 def get_my_clubs(
     search: str | None = Query(
@@ -149,7 +149,7 @@ def get_my_clubs(
     path="/{club_id}",
     response_model=ClubResponse,
     status_code=status.HTTP_200_OK,
-    summary="Lấy chi tiết CLB (thành viên và ADMIN)",
+    summary="Lấy chi tiết CLB (thành viên)",
 )
 def get_club_detail(
     club_id: int = Path(..., description="ID của câu lạc bộ cần xem"),
@@ -175,7 +175,7 @@ def get_club_detail(
     path="/{club_id}",
     response_model=ClubResponse,
     status_code=status.HTTP_200_OK,
-    summary="Cập nhật CLB theo id (Chỉ cho OWNER và ADMIN)",
+    summary="Cập nhật CLB theo id (Chỉ cho OWNER)",
 )
 def update_club_by_id(
     club_in: UpdateClub,
@@ -185,7 +185,7 @@ def update_club_by_id(
     _: ClubMember = Depends(ClubRoleCheck("OWNER")),
 ):
     """
-    Cập nhật CLB (Chỉ OWNER hoặc ADMIN)
+    Cập nhật CLB (Chỉ OWNER)
     """
     updated_club = club_service.update_club(
         db=db, club_id=club_id, club_in=club_in, current_user=current_user
@@ -202,7 +202,7 @@ def update_club_by_id(
     path="/{club_id}",
     response_model=ClubResponse,
     status_code=status.HTTP_200_OK,
-    summary="Xóa CLB (Chỉ OWNER và ADMIN)",
+    summary="Xóa CLB (Chỉ OWNER)",
 )
 def delete_club_by_id(
     club_id: int = Path(..., description="ID của CLB cần xóa (OWNER)"),
@@ -323,7 +323,7 @@ def soft_delete_club(
     path="/{club_id}/activities",
     response_model=ActivityCreateResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Thêm hoạt động CLB (thành viên và ADMIN)",
+    summary="Thêm hoạt động CLB (thành viên)",
 )
 def new_activity(
     activity_in: CreateActivity,
