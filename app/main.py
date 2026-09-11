@@ -25,14 +25,6 @@ from app.db.database import Base, engine
 # import router
 from app.routers import activity, auth, club, users
 
-# Khời tạo ứng dụng FastAPI
-app = FastAPI(
-    title=settings.APP_NAME,
-    description=settings.APP_DESCRIPION,
-    version=settings.APP_VERSION,
-    servers=[{"url": "/", "description": "Default Server"}],
-)
-
 origins_whitelist = settings.ALLOWED_ORIGINS
 
 app.add_middleware(
@@ -41,12 +33,31 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=[
+        # Header chuẩn
         "Content-Type",
         "Authorization",
         "Accept",
+        "accept",
         "Origin",
-        "X-Requested-With"
+        "X-Requested-With",
+        # Client Hints (Trình duyệt Chrome/Edge/Cốc Cốc tự động đính kèm)
+        "Sec-Ch-Ua",
+        "sec-ch-ua",
+        "Sec-Ch-Ua-Mobile",
+        "sec-ch-ua-mobile",
+        "Sec-Ch-Ua-Platform",
+        "sec-ch-ua-platform",
+        "User-Agent",
+        "user-agent",
     ],
+)
+
+# Khời tạo ứng dụng FastAPI
+app = FastAPI(
+    title=settings.APP_NAME,
+    description=settings.APP_DESCRIPION,
+    version=settings.APP_VERSION,
+    servers=[{"url": "/", "description": "Default Server"}],
 )
 
 # Gắn limiter vào app state và đăng ký handler xửa lý lỗi 429
