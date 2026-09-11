@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     LOCK_MINUTES: int
 
     # Cấu hình CORS
-    ALLOWED_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+    ALLOWED_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173", "https://student-club-management-api.onrender.com"]
 
     class Config:
         """Chỉ định đọc file .env"""
