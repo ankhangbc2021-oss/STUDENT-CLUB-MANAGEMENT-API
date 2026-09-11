@@ -7,7 +7,7 @@ Khởi tạo FastAPI app, include routers, middleware
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
 # import slowapi dùng để rate limit
 from slowapi import _rate_limit_exceeded_handler
@@ -103,9 +103,7 @@ def health_check():
     return {"status": "healthy", "message": "Sever FastAPI đang hoạt động bình thường"}
 
 
-@app.get("/", tags=["Root"], summary="Chào mừng")
-def root():
-    """Mặc định"""
-    return {
-        "message": "Chào mừng bạn đến với ứng dụng Student Club Management API. Hãy truy cập /docs"
-    }
+@app.get("/", include_in_schema=False)
+def redirect_to_docs():
+    # include_in_schema=False giúp ẩn endpoint này trên trang tài liệu /docs
+    return RedirectResponse(url="/docs")
