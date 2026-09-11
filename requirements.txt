@@ -8,3 +8,4 @@ PyMySQL
 pydantic-settings
 email-validator
 slowapi
+cryptography
