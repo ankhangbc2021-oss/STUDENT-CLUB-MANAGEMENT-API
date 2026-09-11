@@ -30,6 +30,7 @@ app = FastAPI(
     title=settings.APP_NAME,
     description=settings.APP_DESCRIPION,
     version=settings.APP_VERSION,
+    servers=[{"url": "/", "description": "Default Server"}],
 )
 
 origins_whitelist = settings.ALLOWED_ORIGINS
@@ -38,7 +39,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins_whitelist,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
 )
 
