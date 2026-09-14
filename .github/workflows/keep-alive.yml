@@ -2,8 +2,8 @@ name: Keep Render Alive
 
 on:
   schedule:
-    # Chạy mỗi 14 phút
-    - cron: "*/14 * * * *"
+    # Chạy mỗi 10 phút
+    - cron: "*/10 * * * *"
   workflow_dispatch:
 
 jobs:
