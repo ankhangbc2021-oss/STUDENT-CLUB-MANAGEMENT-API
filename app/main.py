@@ -27,6 +27,16 @@ from app.routers import activity, auth, club, users
 
 origins_whitelist = settings.ALLOWED_ORIGINS
 
+
+# Khời tạo ứng dụng FastAPI
+app = FastAPI(
+    title=settings.APP_NAME,
+    description=settings.APP_DESCRIPION,
+    version=settings.APP_VERSION,
+    servers=[{"url": "/", "description": "Default Server"}],
+)
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins_whitelist,
@@ -52,13 +62,6 @@ app.add_middleware(
     ],
 )
 
-# Khời tạo ứng dụng FastAPI
-app = FastAPI(
-    title=settings.APP_NAME,
-    description=settings.APP_DESCRIPION,
-    version=settings.APP_VERSION,
-    servers=[{"url": "/", "description": "Default Server"}],
-)
 
 # Gắn limiter vào app state và đăng ký handler xửa lý lỗi 429
 app.state.limiter = limiter
