@@ -24,7 +24,6 @@ engine = create_engine(
     pool_pre_ping=True,
     pool_recycle=3600,
 )
-engine = create_engine()
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
