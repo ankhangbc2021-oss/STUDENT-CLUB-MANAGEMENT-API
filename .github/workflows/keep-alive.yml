@@ -1,0 +1,15 @@
+name: Keep Render Alive
+on:
+  schedule:
+    # Chạy mỗi 14 phút
+    - cron: "*/14 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Server
+        run: curl -s https://student-club-management-api.onrender.com/health > /dev/null
+
+# Dùng để server render ko tắt
